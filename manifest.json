@@ -1,0 +1,19 @@
+{
+  "name": "HIKE+ · V.01",
+  "short_name": "HIKE+",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#101210",
+  "theme_color": "#f05216",
+  "lang": "fr",
+  "icons": [
+    {
+      "src": "hike-logo.png",
+      "sizes": "1254x1254",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "description": "HIKE+ · Application de randonnée · Navigation · Progression"
+}
