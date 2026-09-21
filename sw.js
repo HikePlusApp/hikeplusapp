@@ -1,5 +1,35 @@
-const CACHE='hikeplus-v01';
-const CORE=['./', './index.html', './manifest.json', './hike-logo.png', './gpx/Boucle-Rocher-des-Goudes-et-Marseilleveyre.gpx', './gpx/Calanques-Callelongue-Mounine-Marseilleveyre.gpx', './gpx/Calanques-de-Sugiton-et-de-Morgiou.gpx', './gpx/Cirkwi-Sentier_du_Corsaire_-_n°102.gpx', './gpx/Cirkwi-Sur_les_pas_de_Jean-François_Millet_-_n°101.gpx', './gpx/GPX-Boucle-CGR.gpx', './gpx/GR34-Bretagne.gpx', './gpx/Marseille-les-calanques-et-la-cote-bleue.gpx', './gpx/ars.gpx', './gpx/le-bois-plage-en-re.gpx', './gpx/saint-clement-les-portes.gpx', './gpx/visorando-tour-de-la-pointe-du-van.gpx'];
-self.addEventListener('install',e=>{e.waitUntil(caches.open(CACHE).then(c=>c.addAll(CORE)).then(()=>self.skipWaiting()));});
-self.addEventListener('activate',e=>{e.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k!==CACHE).map(k=>caches.delete(k)))).then(()=>self.clients.claim()));});
-self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;e.respondWith(fetch(e.request).then(r=>{const copy=r.clone();caches.open(CACHE).then(c=>c.put(e.request,copy));return r;}).catch(()=>caches.match(e.request).then(r=>r||caches.match('./index.html'))));});
+const CACHE='hikeplus-v25-beta';
+const CORE=['./','./index.html','./manifest.json','./hike-logo.png'];
+
+self.addEventListener('install',event=>{
+  event.waitUntil(
+    caches.open(CACHE)
+      .then(cache=>cache.addAll(CORE))
+      .then(()=>self.skipWaiting())
+  );
+});
+
+self.addEventListener('activate',event=>{
+  event.waitUntil(
+    caches.keys()
+      .then(keys=>Promise.all(keys.filter(key=>key!==CACHE).map(key=>caches.delete(key))))
+      .then(()=>self.clients.claim())
+  );
+});
+
+// Network-first: when GitHub Pages has a new build, the app gets it immediately.
+// The cache is only a fallback for offline use.
+self.addEventListener('fetch',event=>{
+  if(event.request.method!=='GET') return;
+  event.respondWith(
+    fetch(event.request, {cache:'no-store'})
+      .then(response=>{
+        if(response && response.ok){
+          const copy=response.clone();
+          caches.open(CACHE).then(cache=>cache.put(event.request,copy));
+        }
+        return response;
+      })
+      .catch(()=>caches.match(event.request).then(response=>response || caches.match('./index.html')))
+  );
+});
