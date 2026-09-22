@@ -1,4 +1,4 @@
-const CACHE='hikeplus-v01-3-admin-boucles-v5';
+const CACHE='hikeplus-v01-4-titres-boucles';
 const CORE=['./','./index.html','./manifest.json','./hike-logo.png'];
 
 self.addEventListener('install',event=>{
