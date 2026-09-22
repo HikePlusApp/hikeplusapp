@@ -15,3 +15,8 @@ Version officielle V.01 de HIKE+.
 ## Déploiement GitHub Pages
 Publier le contenu de ce dossier à la racine du dépôt GitHub Pages.
 Le dossier `gpx/` doit rester au même niveau que `index.html`.
+
+Pack France intégré : V5 BOUCLES (162 GPX : 126 existantes + 36 boucles).
+
+
+V5: le pack France est automatiquement redécompressé au lancement de l’application.

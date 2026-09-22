@@ -1,4 +1,4 @@
-const CACHE='hikeplus-v26-v01-2-design';
+const CACHE='hikeplus-v01-3-admin-boucles-v5';
 const CORE=['./','./index.html','./manifest.json','./hike-logo.png'];
 
 self.addEventListener('install',event=>{
