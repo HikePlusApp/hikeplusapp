@@ -73,6 +73,9 @@ body{overscroll-behavior:none}.content{width:100%}@media (min-width:500px){#app 
 .exploreInfo{position:absolute;left:10px;bottom:10px;z-index:1000;background:#fff;border:1px solid #ddd;border-radius:11px;padding:8px 10px;box-shadow:0 5px 18px #0002;font-size:10px;font-weight:800}
 .hikeMarker{width:38px;height:38px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);background:#fc4c02;border:3px solid #fff;box-shadow:0 4px 14px #0004;display:grid;place-items:center}
 .hikeMarker span{transform:rotate(45deg);font-size:16px;color:#fff}
+.hikeMarker.difficult{position:relative;display:grid;place-items:center}
+.hikeMarker.difficult span{width:21px;height:21px;border-radius:50%;background:#fff;color:#a61d1d;display:grid;place-items:center;font-family:Arial,Helvetica,sans-serif;font-size:16px;line-height:21px;font-weight:900;text-shadow:none}
+.hikeMarker.difficult{background:linear-gradient(145deg,#c52828,#8f1515);border:3px solid #fff;box-shadow:0 3px 10px rgba(0,0,0,.28)}
 .hikeMarker.moderate{background:linear-gradient(145deg,#f2b705,#d88a00);box-shadow:0 4px 16px rgba(216,138,0,.34)}
 .hikeMarker.difficult{background:linear-gradient(145deg,#b91c1c,#7f1d1d);box-shadow:0 4px 16px rgba(127,29,29,.42)}
 .hikeMarker.moderate span,.hikeMarker.difficult span{font-size:17px;font-weight:950;text-shadow:0 1px 2px #0006}
@@ -284,10 +287,10 @@ html:not(.darkMode){color-scheme:light!important;}
 
 /* Curseur GPS style Waze */
 .hike-location-arrow{background:transparent!important;border:0!important}
-.wazeArrow{position:relative;width:52px;height:52px;display:grid;place-items:center;transform-origin:center;transition:transform .2s ease;filter:drop-shadow(0 2px 4px rgba(0,0,0,.25))}
-.wazeArrowHalo{position:absolute;width:44px;height:44px;border-radius:50%;background:rgba(38,132,255,.12);box-shadow:0 0 0 1.5px rgba(255,255,255,.95),0 0 0 6px rgba(38,132,255,.07)}
-.wazeArrowBody{position:relative;width:26px;height:33px;background:linear-gradient(160deg,#4da2ff 0%,#1674ed 70%);clip-path:polygon(50% 0%,100% 92%,50% 72%,0% 92%);border-radius:10px;box-shadow:0 2px 5px rgba(0,70,160,.3)}
-.wazeArrowBody:before{display:none}
+.wazeArrow{position:relative;width:48px;height:48px;display:grid;place-items:center;transform-origin:center;transition:transform .15s ease;filter:drop-shadow(0 1px 3px rgba(0,0,0,.22))}
+.wazeArrowHalo{position:absolute;width:40px;height:40px;border-radius:50%;background:rgba(64,150,255,.12);box-shadow:0 0 0 2.5px rgba(255,255,255,.96),0 0 0 7px rgba(64,150,255,.07)}
+.wazeArrowBody{position:relative;width:27px;height:34px;background:linear-gradient(160deg,#338ff7 0%,#0871e9 72%);clip-path:polygon(50% 0%,100% 91%,56% 72%,50% 100%,44% 72%,0% 91%);border-radius:5px;box-shadow:0 1px 4px rgba(0,70,160,.30)}
+.wazeArrowBody:before{content:'';position:absolute;left:50%;top:5px;transform:translateX(-50%);width:2px;height:18px;border-radius:99px;background:rgba(255,255,255,.16)}
 .wazeArrowBody span{display:none}
 .sheetMeta{display:none!important;}\n</style>
 
@@ -623,9 +626,77 @@ $('regAvatarBtn').onclick=()=>$('regAvatarFile').click();
 $('regAvatarFile').onchange=e=>{const f=e.target.files?.[0];if(!f)return;fileToAvatarDataURL(f,data=>{$('regAvatarPreview').innerHTML=`<img src="${data}" alt="">`})};
 function findProfileByEmail(email){const target=email.trim().toLowerCase();return Object.keys(db.profiles).find(k=>(db.profiles[k].email||'').toLowerCase()===target)}
 $('authForm').onsubmit=e=>{e.preventDefault();const email=$('email').value.trim().toLowerCase();if(!email||!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))return toast('Entre une adresse e-mail valide');const password=mode==='register'?$('password').value:$('passwordLogin').value;if(password.length<6)return toast('Le mot de passe doit contenir au moins 6 caractères');if(mode==='register'){const pseudo=$('pseudo').value.trim();const confirm=$('passwordConfirm').value;if(!pseudo||pseudo.length<2)return toast('Choisis un pseudo d’au moins 2 caractères');if(password!==confirm)return toast('Les mots de passe ne correspondent pas');if(findProfileByEmail(email))return toast('Cette adresse e-mail est déjà utilisée');const avatarFile=$('regAvatarFile').files?.[0];const create=avatar=>{const key=email;db.profiles[key]={name:pseudo,email,password,xp:0,level:1,hikes:[],tutorialSeen:false,avatar:avatar||'',darkMode:false,certified:false,grades:[],countdownDuration:20,language:'fr',feedbackAnswered:false,feedback:null};db.current=key;persist();enter(true)};if(avatarFile){fileToAvatarDataURL(avatarFile,create)}else create('')}else{const key=findProfileByEmail(email);if(!key)return toast('Aucun compte trouvé avec cet e-mail');const p=db.profiles[key];if(p.password!==password)return toast('Mot de passe incorrect');db.current=key;persist();enter()}};
-function updateExploreUserPosition(pos){window.hikeCurrentPosition=pos;const p=[pos.coords.latitude,pos.coords.longitude];if(!exploreMap||!window.L)return;const heading=Number.isFinite(pos.coords.heading)&&pos.coords.heading>=0?pos.coords.heading:0;if(exploreUserMarker)exploreUserMarker.setLatLng(p).setIcon(arrowIcon(heading));else exploreUserMarker=L.marker(p,{icon:arrowIcon(heading),zIndexOffset:2000}).addTo(exploreMap);}
+let exploreLocationRequested=false;
+let lastExploreFix=null;
+let deviceHeading=null;
+let deviceHeadingListening=false;
+function normalizeHeading(v){const n=Number(v);if(!Number.isFinite(n))return null;return ((n%360)+360)%360}
+function enableDeviceHeading(){
+  if(deviceHeadingListening)return;
+  deviceHeadingListening=true;
+  const handler=e=>{
+    let h=null;
+    // iPhone/Safari : webkitCompassHeading est déjà exprimé comme un cap
+    // 0=N, 90=E, 180=S, 270=O, dans le sens horaire.
+    if(Number.isFinite(e.webkitCompassHeading)) h=normalizeHeading(e.webkitCompassHeading);
+    else if(Number.isFinite(e.alpha)){
+      h=normalizeHeading(360-e.alpha);
+      const angle=Number(window.screen?.orientation?.angle)||0;
+      h=normalizeHeading(h+angle);
+    }
+    if(h!==null){
+      deviceHeading=h;
+      if(window.hikeCurrentPosition && exploreMap) updateExploreUserPosition(window.hikeCurrentPosition);
+    }
+  };
+  try{
+    if(typeof DeviceOrientationEvent!=='undefined' && typeof DeviceOrientationEvent.requestPermission==='function'){
+      DeviceOrientationEvent.requestPermission().then(r=>{if(r==='granted')window.addEventListener('deviceorientation',handler,true)}).catch(()=>{});
+    }else if('ondeviceorientationabsolute' in window){window.addEventListener('deviceorientationabsolute',handler,true)}
+    else window.addEventListener('deviceorientation',handler,true);
+  }catch(e){}
+}
+function positionHeading(pos,previous){
+  const gps=normalizeHeading(pos?.coords?.heading);
+  if(gps!==null)return gps;
+  if(deviceHeading!==null)return deviceHeading;
+  if(previous){
+    const a=Number(previous.lat),b=Number(previous.lon),c=Number(pos.coords.latitude),d=Number(pos.coords.longitude);
+    const dy=Math.sin((d-b)*Math.PI/180)*Math.cos(c*Math.PI/180);
+    const dx=Math.cos(a*Math.PI/180)*Math.sin(c*Math.PI/180)-Math.sin(a*Math.PI/180)*Math.cos(c*Math.PI/180)*Math.cos((d-b)*Math.PI/180);
+    const h=Math.atan2(dy,dx)*180/Math.PI;
+    if(Math.hypot(c-a,d-b)>0.00001)return normalizeHeading(h);
+  }
+  return 0;
+}
+function updateExploreUserPosition(pos){
+  if(!pos?.coords)return;
+  window.hikeCurrentPosition=pos;
+  const lat=Number(pos.coords.latitude),lon=Number(pos.coords.longitude);
+  if(!Number.isFinite(lat)||!Number.isFinite(lon)||!exploreMap||!window.L)return;
+  const p=[lat,lon];
+  const heading=positionHeading(pos,lastExploreFix);
+  lastExploreFix={lat,lon};
+  if(exploreUserMarker){
+    exploreUserMarker.setLatLng(p).setIcon(arrowIcon(heading));
+    try{exploreUserMarker.setZIndexOffset(5000);exploreUserMarker.bringToFront()}catch(e){}
+  } else {
+    exploreUserMarker=L.marker(p,{icon:arrowIcon(heading),zIndexOffset:5000,interactive:false,pane:'markerPane'}).addTo(exploreMap);
+    try{exploreUserMarker.bringToFront()}catch(e){}
+  }
+  // Pas de cercle de précision : le curseur suffit à représenter la position utilisateur.
+}
 let initialLocationWatchId=null;
-function requestInitialLocation(){if(!navigator.geolocation)return;const opts={enableHighAccuracy:true,maximumAge:3000,timeout:15000};navigator.geolocation.getCurrentPosition(updateExploreUserPosition,()=>{},opts);if(initialLocationWatchId===null){initialLocationWatchId=navigator.geolocation.watchPosition(updateExploreUserPosition,()=>{},opts)}}
+function requestInitialLocation(){
+  if(!navigator.geolocation)return;
+  if(exploreLocationRequested)return;
+  exploreLocationRequested=true;
+  const opts={enableHighAccuracy:true,maximumAge:0,timeout:20000};
+  navigator.geolocation.getCurrentPosition(updateExploreUserPosition,()=>{exploreLocationRequested=false;},opts);
+  if(initialLocationWatchId===null){
+    initialLocationWatchId=navigator.geolocation.watchPosition(updateExploreUserPosition,()=>{},opts);
+  }
+}
 function enter(afterCreate=false){user=db.profiles[db.current];if(!user)return;user.xp=Math.min(MAX_BETA_XP,Math.max(0,Number(user.xp)||0));user.level=Math.min(MAX_BETA_LEVEL,levelFromXp(user.xp));if(!Array.isArray(user.grades))user.grades=gradeForLevel(user.level||1).map((_,i)=>i);if(![5,10,15,20,30,35,60].includes(Number(user.countdownDuration)))user.countdownDuration=20;user.language='fr';db.profiles[db.current]=user;persist();applyTheme();$('auth').classList.remove('active');$('app').classList.add('active');render('home');requestInitialLocation();if(afterCreate){setTimeout(showTutorial,3900)}}
 function logout(){db.current='';persist();user=null;applyTheme();$('app').classList.remove('active');$('auth').classList.add('active');$('authForm').reset();setMode('login')}
 const routeData={name:'La route des forts',distance:9.8,dplus:178,gpx:'gpx/Cirkwi-La_route_des_forts.gpx',image:'https://cdn.iris-etourism.io/uploads/tourisme_en_cotentin/sizes/01b/816331-fr-0-800x520.webp'};
@@ -638,13 +709,11 @@ const MANCHE_HIKES=[
 {name:'Les Maraîchers du littoral',city:'Montfarville',region:'Val de Saire',distance:8.2,dplus:42,duration:'2h30',difficulty:'Facile',lat:49.654846,lon:-1.268738,source:'Tourisme en Cotentin',gpx:'gpx/Les_Maraichers_du_littoral.gpx',nav:true},
 {name:'Gatteville-Phare et la pointe de Barfleur',city:'Gatteville-le-Phare',region:'Val de Saire',distance:13.6,dplus:74,duration:'3h30',difficulty:'Modérée',lat:49.686667,lon:-1.282528,source:'Tourisme en Cotentin',gpx:'gpx/Gatteville_Phare_et_pointe_de_Barfleur.gpx',nav:true},
 {name:'Sentier Vauban',city:'Saint-Vaast-la-Hougue',region:'Val de Saire',distance:10.0,dplus:0,duration:'2h30',difficulty:'Facile',lat:49.589611,lon:-1.266556,source:'Tourisme en Cotentin',gpx:'gpx/Sentier_Vauban.gpx',nav:true},
-{name:'Porte de la Hague',city:'Urville-Nacqueville',region:'La Hague',distance:13.9,dplus:220,duration:'3h30',difficulty:'Modérée',lat:49.674833,lon:-1.743000,source:'Tourisme en Cotentin',gpx:'gpx/Cirkwi-Porte_de_la_Hague_-_n_100.gpx',nav:true},
+{name:'Porte de la Hague',city:'Urville-Nacqueville',region:'La Hague',distance:13.9,dplus:220,duration:'3h30',difficulty:'Modérée',lat:49.698710,lon:-1.884600,source:'Tourisme en Cotentin',gpx:'gpx/Cirkwi-Porte_de_la_Hague_-_n_100.gpx',nav:true},
 {name:'Entre mare et dunes',city:'Vauville',region:'La Hague',distance:13.3,dplus:377,duration:'4h00',difficulty:'Modérée',lat:49.637167,lon:-1.844528,source:'Tourisme en Cotentin',gpx:'gpx/Cirkwi-Entre_mare_et_dunes_-_n_106.gpx',nav:true},
-{name:'Sur les pas de Jean-François Millet',city:'Gréville-Hague',region:'La Hague',distance:13.2,dplus:248,duration:'3h15',difficulty:'Modérée',lat:49.680778,lon:-1.791778,source:'Tourisme en Cotentin'},
 {name:'Chemin du Patrimoine',city:'Siouville-Hague',region:'La Hague',distance:7.3,dplus:115,duration:'1h30',difficulty:'Facile',lat:49.558222,lon:-1.856444,source:'Tourisme en Cotentin',gpx:'gpx/Chemin_du_Patrimoine_n160.gpx',nav:true},
 {name:"L'Oraille",city:'Martinvast',region:'La Hague / Martinvast',distance:7.4,dplus:166,duration:'~2h',difficulty:'Modérée',lat:49.595222,lon:-1.664194,source:'Tourisme en Cotentin',gpx:'gpx/L_Oraille_n135.gpx',nav:true},
-{name:'Sentier du poète',city:'Omonville-la-Petite',region:'La Hague',distance:15.0,dplus:182,duration:'4h00',difficulty:'Modérée',lat:49.674833,lon:-1.743000,source:'Tourisme en Cotentin',gpx:'gpx/Cirkwi-Sentier_du_po_te_-_n_103.gpx',nav:true},
-{name:'Sentier du Corsaire',city:'Digulleville',region:'La Hague',distance:12.2,dplus:181,duration:'2h30',difficulty:'Facile',lat:49.696139,lon:-1.855167,source:'Tourisme en Cotentin'},
+{name:'Sentier du poète',city:'Omonville-la-Petite',region:'La Hague',distance:15.0,dplus:182,duration:'4h00',difficulty:'Modérée',lat:49.698710,lon:-1.884600,source:'Tourisme en Cotentin',gpx:'gpx/Cirkwi-Sentier_du_po_te_-_n_103.gpx',nav:true},
 {name:'Le Cap de la Hague',city:'Goury / Auderville',region:'La Hague',distance:13.4,dplus:150,duration:'3h15',difficulty:'Modérée',lat:49.715722,lon:-1.945250,source:'Tourisme en Cotentin',gpx:'gpx/Cirkwi-Le_Cap_de_la_Hague_-_n_104.gpx',nav:true},
 {name:'Sentier du contrebandier',city:'Jobourg',region:'La Hague',distance:10.5,dplus:404,duration:'4h00',difficulty:'Difficile',lat:49.677472,lon:-1.938361,source:'Tourisme en Cotentin',gpx:'gpx/Sentier_du_contrebandier_n105.gpx',nav:true},
 {name:'La Valaiserie',city:'Nouainville',region:'Cherbourg',distance:8.9,dplus:152,duration:'2h00',difficulty:'Facile',lat:49.624861,lon:-1.684889,source:'Tourisme en Cotentin',gpx:'gpx/La_Valaiserie_n137.gpx',nav:true},
@@ -666,8 +735,8 @@ const MANCHE_HIKES=[
 {name:'Les chemins du Mont-Saint-Michel — Cherbourg → Les Pieux',city:'Cherbourg-en-Cotentin',region:'Cotentin',distance:26.15,dplus:531,duration:'6h00',difficulty:'Difficile',lat:49.642340,lon:-1.622760,nav:true,source:'Cirkwi',gpx:'gpx/Cirkwi-Les_chemins_du_Mont-Saint-Michel_-_Chemin_de_Cherbourg_-_Cherbourg-en-Cotentin_-_Les_Pieux.gpx'},
 {name:'Boucle de la Côte de Granit Rose',city:'Lannion',region:'Bretagne · Côte de Granit Rose',distance:81.42,dplus:576,duration:'4 jours',difficulty:'Difficile',lat:48.731832,lon:-3.462010,nav:true,source:'Office de Tourisme Côte de Granit Rose',gpx:'gpx/GPX-Boucle-CGR.gpx'},
 {name:'Tour de la Pointe du Van',city:'Pointe du Van',region:'Bretagne · Finistère',distance:10.55,dplus:301,duration:'~3h00',difficulty:'Modérée',lat:48.045697,lon:-4.705665,nav:true,source:'Visorando',gpx:'gpx/visorando-tour-de-la-pointe-du-van.gpx'},
-{name:'Sur les pas de Jean-François Millet',city:'Gréville-Hague',region:'Normandie · La Hague',distance:13.21,dplus:451,duration:'~3h15',difficulty:'Modérée',lat:49.682200,lon:-1.791260,nav:true,source:'Cirkwi',gpx:'gpx/Cirkwi-Sur_les_pas_de_Jean-François_Millet_-_n°101.gpx'},
-{name:'Sentier du Corsaire',city:'Digulleville',region:'Normandie · La Hague',distance:12.22,dplus:293,duration:'~2h30',difficulty:'Modérée',lat:49.696030,lon:-1.854190,nav:true,source:'Cirkwi',gpx:'gpx/Cirkwi-Sentier_du_Corsaire_-_n°102.gpx'},
+{name:'Sur les pas de Jean-François Millet',city:'Gréville-Hague',region:'Normandie · La Hague',distance:13.21,dplus:451,duration:'~3h15',difficulty:'Modérée',lat:49.682200,lon:-1.791260,nav:true,source:'Cirkwi',gpx:'gpx/Cirkwi-Sur_les_pas_de_Jean-Francois_Millet_-_n101.gpx'},
+{name:'Sentier du Corsaire',city:'Digulleville',region:'Normandie · La Hague',distance:12.22,dplus:293,duration:'~2h30',difficulty:'Modérée',lat:49.696030,lon:-1.854190,nav:true,source:'Cirkwi',gpx:'gpx/Cirkwi-Sentier_du_Corsaire_n102.gpx'},
 {name:'Saint-Clément-les-Portes',city:'Île de Ré',region:'Atlantique · Charente-Maritime',distance:19.91,dplus:69,duration:'~4h30',difficulty:'Modérée',lat:46.228474,lon:-1.541867,nav:true,source:'GPX importé',gpx:'gpx/saint-clement-les-portes.gpx'},
 {name:'Le Bois-Plage-en-Ré',city:'Île de Ré',region:'Atlantique · Charente-Maritime',distance:9.37,dplus:30,duration:'~2h15',difficulty:'Facile',lat:46.176334,lon:-1.377526,nav:true,source:'GPX importé',gpx:'gpx/le-bois-plage-en-re.gpx'},
 {name:'Ars-en-Ré',city:'Île de Ré',region:'Atlantique · Charente-Maritime',distance:3.88,dplus:4,duration:'~1h00',difficulty:'Facile',lat:46.205274,lon:-1.518112,nav:true,source:'GPX importé',gpx:'gpx/ars.gpx'},
@@ -714,7 +783,7 @@ function isDone(name){return (user?.hikes||[]).some(h=>h.name===name)}
 let exploreMap=null,exploreMarkers=[],exploreUserMarker=null,exploreSelected=null,exploreFilter='all',explorePreviewRoute=null;
 
 function mancheFiltered(){const q=(document.getElementById('hikeSearch')?.value||'').trim().toLowerCase();return MANCHE_HIKES.filter(h=>(!q||`${h.name} ${h.city} ${h.region}`.toLowerCase().includes(q))&&(exploreFilter==='all'||(exploreFilter==='easy'&&h.difficulty==='Facile')||(exploreFilter==='moderate'&&h.difficulty==='Modérée')||(exploreFilter==='hard'&&h.difficulty==='Difficile')||(exploreFilter==='done'&&isDone(h.name))));}
-function markerIcon(h){const done=isDone(h.name),difficult=h.difficulty==='Difficile',moderate=h.difficulty==='Modérée';const cls=`hikeMarker ${done?'done ':''}${difficult?'difficult ':''}${moderate?'moderate':''}`;const symbol=done?'✓':(difficult?'⚠':(moderate?'◆':'●'));return L.divIcon({className:'',html:`<div class="${cls}"><span>${symbol}</span></div>`,iconSize:[38,38],iconAnchor:[19,38]});}
+function markerIcon(h){const done=isDone(h.name),difficult=h.difficulty==='Difficile',moderate=h.difficulty==='Modérée';const cls=`hikeMarker ${done?'done ':''}${difficult?'difficult ':''}${moderate?'moderate':''}`;const symbol=done?'✓':(difficult?'!':(moderate?'◆':'●'));return L.divIcon({className:'',html:`<div class="${cls}"><span>${symbol}</span></div>`,iconSize:[38,38],iconAnchor:[19,38]});}
 async function openHikeSheet(h){exploreSelected=h;const s=$('exploreSheet');if(!s)return;if(explorePreviewRoute&&exploreMap){try{exploreMap.removeLayer(explorePreviewRoute)}catch(e){}explorePreviewRoute=null}const done=isDone(h.name);$('sheetEyebrow').textContent=`${h.region} · ${h.city}`;$('sheetTitle').textContent=h.name;$('sheetMeta').textContent='';$('sheetDistance').textContent=h.distance;$('sheetDplus').textContent='+'+h.dplus;$('sheetDuration').textContent=h.duration;$('sheetDifficulty').textContent=h.difficulty;$('sheetDone').textContent=done?'✓ Rando déjà faite':'';const b=$('sheetStart');b.disabled=!h.nav;b.textContent=h.nav?t('sheetStart'):'Tracé GPX à ajouter';s.classList.add('show');if(exploreMap)exploreMap.panTo([h.lat,h.lon],{animate:true});if(h.gpx&&exploreMap){try{const r=await fetch(h.gpx,{cache:'no-store'});if(!r.ok)throw new Error('GPX '+r.status);const txt=await r.text();const previewPts=parseGPX(txt);if(previewPts.length>1&&exploreSelected===h){explorePreviewRoute=L.polyline(previewPts.map(p=>[p.lat,p.lon]),{color:'#19a463',weight:6,opacity:.95,lineCap:'round',lineJoin:'round',interactive:false,className:'explorePreviewRoute'}).addTo(exploreMap);exploreMap.fitBounds(explorePreviewRoute.getBounds(),{padding:[70,110]})}}catch(e){}}}
 function openNavChooser(h){
   if(!h||!h.nav)return;
@@ -753,8 +822,31 @@ function startSelectedHike(h){
   startNav();
 }
 function drawExploreMarkers(){if(!exploreMap||!window.L)return;exploreMarkers.forEach(m=>exploreMap.removeLayer(m));exploreMarkers=[];const arr=mancheFiltered();arr.forEach(h=>{const m=L.marker([h.lat,h.lon],{icon:markerIcon(h),title:h.name}).addTo(exploreMap);m.on('click',()=>openHikeSheet(h));exploreMarkers.push(m)});$('exploreCount').textContent=`${arr.length} randonnée${arr.length>1?'s':''} affichée${arr.length>1?'s':''}`;}
-function locateExplore(){if(!navigator.geolocation)return toast('GPS indisponible sur cet appareil');navigator.geolocation.getCurrentPosition(pos=>{updateExploreUserPosition(pos);const p=[pos.coords.latitude,pos.coords.longitude];if(!exploreMap)return;exploreMap.setView(p,14);toast('Position GPS affichée')},()=>toast('Autorisation GPS refusée ou indisponible'),{enableHighAccuracy:true,timeout:10000});}
-function initExploreMap(){if(!window.L)return loadLeafletFallback();const container=$("exploreMap");if(!container)return;if(exploreMap){const oldContainer=exploreMap.getContainer?.();if(oldContainer!==container){try{exploreMap.remove()}catch(e){}exploreMap=null;exploreMarkers=[];exploreUserMarker=null;exploreSelected=null}}if(exploreMap){setTimeout(()=>{try{exploreMap.invalidateSize(true)}catch(e){}},50);drawExploreMarkers();if(window.hikeCurrentPosition)updateExploreUserPosition(window.hikeCurrentPosition);return}exploreMap=L.map(container,{zoomControl:true,attributionControl:true}).setView([49.63,-1.55],10);L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OpenStreetMap contributors'}).addTo(exploreMap);drawExploreMarkers();if(window.hikeCurrentPosition)updateExploreUserPosition(window.hikeCurrentPosition);setTimeout(()=>{try{exploreMap.invalidateSize(true)}catch(e){}},100);}
+function locateExplore(){
+  enableDeviceHeading();
+  if(!navigator.geolocation)return toast('GPS indisponible sur cet appareil');
+  const opts={enableHighAccuracy:true,maximumAge:0,timeout:20000};
+  navigator.geolocation.getCurrentPosition(pos=>{
+    updateExploreUserPosition(pos);
+    const p=[pos.coords.latitude,pos.coords.longitude];
+    if(exploreMap){exploreMap.setView(p,15,{animate:true});toast('Votre position est affichée')}
+  },err=>{
+    const msg=err?.code===1?'Autorisation de localisation refusée':err?.code===2?'Position GPS indisponible':'Localisation trop longue';
+    toast(msg);
+  },opts);
+  if(initialLocationWatchId===null)initialLocationWatchId=navigator.geolocation.watchPosition(updateExploreUserPosition,()=>{},opts);
+}
+function initExploreMap(){
+  if(!window.L)return loadLeafletFallback();
+  const container=$("exploreMap");if(!container)return;
+  if(exploreMap){const oldContainer=exploreMap.getContainer?.();if(oldContainer!==container){try{exploreMap.remove()}catch(e){}exploreMap=null;exploreMarkers=[];exploreUserMarker=null;exploreSelected=null}}
+  if(exploreMap){setTimeout(()=>{try{exploreMap.invalidateSize(true)}catch(e){}},50);drawExploreMarkers();if(window.hikeCurrentPosition)updateExploreUserPosition(window.hikeCurrentPosition);else requestInitialLocation();return}
+  exploreMap=L.map(container,{zoomControl:true,attributionControl:true}).setView([49.63,-1.55],10);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OpenStreetMap contributors'}).addTo(exploreMap);
+  drawExploreMarkers();
+  if(window.hikeCurrentPosition)updateExploreUserPosition(window.hikeCurrentPosition);else requestInitialLocation();
+  setTimeout(()=>{try{exploreMap.invalidateSize(true)}catch(e){}},100);
+}
 let countdownTimer=null;function updateCountdown(){}
 function showTutorial(){
   let step=0;
@@ -941,7 +1033,19 @@ function cpbar(){const n=checkpointTargets.length||checkpointCount();$('cpbar').
 function checkpointIcon(n,done=false){return L.divIcon({className:'checkpoint-icon',html:`<div class=\"checkpoint-dot ${done?'done':''}\"><span>${n}</span></div>`,iconSize:[34,34],iconAnchor:[17,17]})}
 function drawCheckpoints(){if(checkpointLayer){checkpointLayer.clearLayers()}else{checkpointLayer=L.layerGroup().addTo(map)}checkpointTargets=getCheckpointTargets();checkpointMarkers=[];checkpointPoints=checkpointTargets.map((_,i)=>checkpointAt(i));checkpointPoints.forEach((p,i)=>{const m=L.marker([p.lat,p.lon],{icon:checkpointIcon(i+1,cp>=i+1),zIndexOffset:500}).addTo(checkpointLayer);m.bindTooltip(`Checkpoint ${i+1}`,{direction:'top',offset:[0,-14],opacity:.95});checkpointMarkers.push(m)});const s=pts[0],e=pts[pts.length-1];L.circleMarker([s.lat,s.lon],{radius:7,color:'#fff',weight:3,fillColor:'#171717',fillOpacity:1}).bindTooltip('Départ',{direction:'top'}).addTo(checkpointLayer);L.circleMarker([e.lat,e.lon],{radius:7,color:'#fff',weight:3,fillColor:'#fc4c02',fillOpacity:1}).bindTooltip('Arrivée',{direction:'top'}).addTo(checkpointLayer)}
 function refreshCheckpointMarkers(){checkpointMarkers.forEach((m,i)=>m.setIcon(checkpointIcon(i+1,cp>=i+1)))}
-function arrowIcon(deg){return L.divIcon({className:'hike-location-arrow',html:`<div class="wazeArrow" style="transform:rotate(${Number(deg)||0}deg)"><div class="wazeArrowHalo"></div><div class="wazeArrowBody"><span></span></div></div>`,iconSize:[48,48],iconAnchor:[24,24]})}
+function arrowIcon(deg){
+  const d=Number.isFinite(Number(deg))?Number(deg):0;
+  const svg=`<svg xmlns="http://www.w3.org/2000/svg" width="42" height="42" viewBox="0 0 42 42" aria-hidden="true">
+    <circle cx="21" cy="21" r="19" fill="#4b9cff" fill-opacity=".10"/>
+    <circle cx="21" cy="21" r="16.5" fill="none" stroke="#fff" stroke-width="2.5"/>
+    <g transform="rotate(${d} 21 21)" filter="url(#s)">
+      <path d="M21 7 L31 30 L23.5 27 L21 35 L18.5 27 L11 30 Z" fill="#1976ed"/>
+      <path d="M21 7 L31 30 L23.5 27 L21 35 L18.5 27 L11 30 Z" fill="none" stroke="#0d65d4" stroke-width=".75"/>
+    </g>
+    <defs><filter id="s" x="-30%" y="-30%" width="160%" height="160%"><feDropShadow dx="0" dy="1" stdDeviation="1.1" flood-color="#0046a0" flood-opacity=".25"/></filter></defs>
+  </svg>`;
+  return L.divIcon({className:'hike-location-arrow',html:svg,iconSize:[42,42],iconAnchor:[21,21]});
+}
 function makeMap(){if(map)return true;if(!window.L)return false;map=L.map('map',{zoomControl:false,attributionControl:true});L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OpenStreetMap'}).addTo(map);return true}
 function routeSlice(from,to){const out=[];const a=Math.max(0,Math.min(from,total)),b=Math.max(a,Math.min(to,total));if(!pts.length)return out;out.push([atProg(a).lat,atProg(a).lon]);for(let i=1;i<pts.length-1;i++){if(cum[i]>a&&cum[i]<b)out.push([pts[i].lat,pts[i].lon])}out.push([atProg(b).lat,atProg(b).lon]);return out}
 function updateRouteGuidance(progress){
@@ -962,7 +1066,7 @@ function updateRouteGuidance(progress){
   if(routeDone)routeDone.bringToBack();
 }
 function drawRoute(){if(route)map.removeLayer(route);if(routeDone)map.removeLayer(routeDone);if(guidanceLine)map.removeLayer(guidanceLine);route=null;routeDone=null;guidanceLine=null;route=L.polyline(pts.map(p=>[p.lat,p.lon]),{color:'#fc4c02',weight:7,opacity:.98,lineCap:'round',lineJoin:'round'}).addTo(map);routeDone=L.polyline([], {color:'#9aa0a0',weight:5,opacity:.45,lineCap:'round',lineJoin:'round'}).addTo(map);guidanceLine=L.polyline([], {color:'#fff',weight:11,opacity:.9,dashArray:'2 13',lineCap:'round',lineJoin:'round',interactive:false}).addTo(map);drawCheckpoints();map.fitBounds(route.getBounds(),{padding:[70,130]})}
-function marker(p,heading){if(userMarker)userMarker.setLatLng([p.lat,p.lon]).setIcon(arrowIcon(heading||0));else userMarker=L.marker([p.lat,p.lon],{icon:arrowIcon(heading||0),zIndexOffset:1000}).addTo(map)}
+function marker(p,heading){const h=normalizeHeading(heading);const d=h===null?(deviceHeading??0):h;if(userMarker)userMarker.setLatLng([p.lat,p.lon]).setIcon(arrowIcon(d));else userMarker=L.marker([p.lat,p.lon],{icon:arrowIcon(d),zIndexOffset:1000}).addTo(map)}
 function angleDelta(a,b){return ((b-a+540)%360)-180}
 function nextTurn(progress){
   if(!pts.length||progress>=total-8)return null;
@@ -1077,7 +1181,7 @@ async function runStartCountdown(duration){const overlay=$('startCountdownOverla
 function formatNavTime(totalSeconds){const s=Math.max(0,Math.floor(Number(totalSeconds)||0));const h=Math.floor(s/3600),m=Math.floor((s%3600)/60),sec=s%60;return h>0?(h+':'+String(m).padStart(2,'0')+':'+String(sec).padStart(2,'0')):(String(m).padStart(2,'0')+':'+String(sec).padStart(2,'0'))}
 const START_RADIUS_METERS=150;
 async function ensureStartRadius(){if(!navigator.geolocation){toast('Le GPS est nécessaire pour commencer la randonnée');return false}let pos=window.hikeCurrentPosition;if(!pos||!pos.coords){try{pos=await new Promise((resolve,reject)=>navigator.geolocation.getCurrentPosition(resolve,reject,{enableHighAccuracy:true,maximumAge:3000,timeout:15000}))}catch(e){toast(e.code===1?'Autorisez la localisation pour vérifier le départ':'Position GPS indisponible — réessayez');return false}}const current={lat:pos.coords.latitude,lon:pos.coords.longitude};let start=null;if(Number.isFinite(Number(routeData.lat))&&Number.isFinite(Number(routeData.lon)))start={lat:Number(routeData.lat),lon:Number(routeData.lon)};if(!start&&routeData.gpx){try{const r=await fetch(routeData.gpx,{cache:'no-store'});if(!r.ok)throw new Error();const txt=await r.text();const first=parseGPX(txt)[0];if(first)start=first}catch(e){}}if(!start){toast('Point de départ indisponible');return false}const d=hav(current,start);if(d>START_RADIUS_METERS){toast('Tu dois être à moins de 150 m du départ pour commencer la randonnée');clearTimeout(window._returnToHikeChoiceTimer);window._returnToHikeChoiceTimer=setTimeout(()=>{if(!document.getElementById('navScreen')?.classList.contains('active'))render('hikes',true)},4000);return false}return true}
-async function startNav(){if(!(await ensureStartRadius()))return;stopWatch();if(routeData.gpx){try{const r=await fetch(routeData.gpx,{cache:'no-store'});if(!r.ok)throw new Error('GPX '+r.status);GPX=await r.text()}catch(e){toast('Impossible de charger le tracé GPX');return}}prep();if(!makeMap()){$('instruction').textContent='Carte indisponible — recharge la page avec Internet';$('navScreen').classList.add('active');return}$('app').classList.remove('active');$('navScreen').classList.add('active');setTimeout(()=>map.invalidateSize(true),100);traveled=0;dplus=0;best=0;cp=0;lastPos=null;offRouteSince=0;navStarted=false;navCancelling=false;drawRoute();updateRouteGuidance(0);refreshCheckpointMarkers();if(turnMarker){map.removeLayer(turnMarker);turnMarker=null}$('offroute').classList.remove('show');if(userMarker){map.removeLayer(userMarker);userMarker=null}const initialPos=window.hikeCurrentPosition;if(initialPos&&initialPos.coords){const ic=initialPos.coords;const ip={lat:ic.latitude,lon:ic.longitude};const ih=Number.isFinite(ic.heading)&&ic.heading>=0?ic.heading:0;marker(ip,ih);$('gpsAcc').textContent=Number.isFinite(ic.accuracy)?Math.round(ic.accuracy)+' m':'—';}cpbar();$('instruction').textContent=t('preparing');$('navStatus').textContent='DÉPART · COMPTE À REBOURS';$('time').textContent='00:00';const duration=[5,10,15,20,30,35,60].includes(Number(user.countdownDuration))?Number(user.countdownDuration):20;await runStartCountdown(duration);navStarted=true;$('instruction').textContent=t('searching');$('navStatus').textContent=t('navigation');startAt=Date.now();timerId=setInterval(()=>{const s=Math.floor((Date.now()-startAt)/1000);$('time').textContent=formatNavTime(s)},500);saveNavSession();if(!navigator.geolocation){gpsError({code:2});return}const opts={enableHighAccuracy:true,maximumAge:0,timeout:15000};navigator.geolocation.getCurrentPosition(onGPS,gpsError,opts);watchId=navigator.geolocation.watchPosition(onGPS,gpsError,opts)}
+async function startNav(){enableDeviceHeading();if(!(await ensureStartRadius()))return;stopWatch();if(routeData.gpx){try{const r=await fetch(routeData.gpx,{cache:'no-store'});if(!r.ok)throw new Error('GPX '+r.status);GPX=await r.text()}catch(e){toast('Impossible de charger le tracé GPX');return}}prep();if(!makeMap()){$('instruction').textContent='Carte indisponible — recharge la page avec Internet';$('navScreen').classList.add('active');return}$('app').classList.remove('active');$('navScreen').classList.add('active');setTimeout(()=>map.invalidateSize(true),100);traveled=0;dplus=0;best=0;cp=0;lastPos=null;offRouteSince=0;navStarted=false;navCancelling=false;drawRoute();updateRouteGuidance(0);refreshCheckpointMarkers();if(turnMarker){map.removeLayer(turnMarker);turnMarker=null}$('offroute').classList.remove('show');if(userMarker){map.removeLayer(userMarker);userMarker=null}const initialPos=window.hikeCurrentPosition;if(initialPos&&initialPos.coords){const ic=initialPos.coords;const ip={lat:ic.latitude,lon:ic.longitude};const ih=Number.isFinite(ic.heading)&&ic.heading>=0?ic.heading:0;marker(ip,ih);$('gpsAcc').textContent=Number.isFinite(ic.accuracy)?Math.round(ic.accuracy)+' m':'—';}cpbar();$('instruction').textContent=t('preparing');$('navStatus').textContent='DÉPART · COMPTE À REBOURS';$('time').textContent='00:00';const duration=[5,10,15,20,30,35,60].includes(Number(user.countdownDuration))?Number(user.countdownDuration):20;await runStartCountdown(duration);navStarted=true;$('instruction').textContent=t('searching');$('navStatus').textContent=t('navigation');startAt=Date.now();timerId=setInterval(()=>{const s=Math.floor((Date.now()-startAt)/1000);$('time').textContent=formatNavTime(s)},500);saveNavSession();if(!navigator.geolocation){gpsError({code:2});return}const opts={enableHighAccuracy:true,maximumAge:0,timeout:15000};navigator.geolocation.getCurrentPosition(onGPS,gpsError,opts);watchId=navigator.geolocation.watchPosition(onGPS,gpsError,opts)}
 const NAV_SESSION_KEY='hikeplus_nav_session_v1';
 function saveNavSession(){try{const active=document.getElementById('navScreen')?.classList.contains('active');if(!active){localStorage.removeItem(NAV_SESSION_KEY);return}localStorage.setItem(NAV_SESSION_KEY,JSON.stringify({active:true,name:routeData.name,distance:routeData.distance,dplusMeta:routeData.dplus,gpx:routeData.gpx,startAt,traveled,dplus,best,cp,navStarted,simulating,lastPos,offRouteSince,savedAt:Date.now()}))}catch(e){console.warn('HIKE+: session navigation non sauvegardée',e)}}
 function clearNavSession(){try{localStorage.removeItem(NAV_SESSION_KEY)}catch(e){}}
