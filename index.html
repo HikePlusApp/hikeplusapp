@@ -130,7 +130,7 @@ body{background:var(--bg);font-family:-apple-system,BlinkMacSystemFont,"SF Pro D
 .refAction.orange{background:#ff5a1f;color:#fff}.refAction.green{background:#1e5741;color:#fff}.refAction.yellow{background:#f4b900;color:#fff}.refAction.lime{background:#70a915;color:#fff}
 .refIcon{width:54px;height:54px;border:2px solid rgba(255,255,255,.72);border-radius:50%;display:grid;place-items:center;font-size:25px;font-weight:900;opacity:.96}.refActionTitle{font-size:13px;line-height:1.12;font-weight:950;max-width:125px}.refActionSub{font-size:9px;line-height:1.25;font-weight:750;opacity:.8;margin-top:4px}
 .refBanner{margin-top:8px;min-height:168px;border-radius:8px;overflow:hidden;position:relative;background:#234b39 url('https://images.unsplash.com/photo-1441974231531-c6227db76b6e?auto=format&fit=crop&w=1200&q=82') center/cover;box-shadow:0 3px 12px rgba(20,30,24,.1)}
-.refBanner:after{content:'';position:absolute;inset:0;background:linear-gradient(90deg,rgba(12,45,31,.78),rgba(12,45,31,.18) 70%,rgba(12,45,31,.06))}.refBannerInner{position:relative;z-index:1;color:#fff;padding:20px 17px;max-width:280px}.refBannerEyebrow{font-size:9px;font-weight:950;letter-spacing:.13em;text-transform:uppercase;opacity:.82}.refBanner h2{font-size:25px;line-height:.98;letter-spacing:-.055em;margin:8px 0 7px}.refBanner p{font-size:10px;line-height:1.35;color:rgba(255,255,255,.82);margin:0 0 12px}.refPill{display:inline-flex;align-items:center;gap:5px;background:#fff;color:#183a2c;border-radius:999px;padding:8px 11px;font-size:9px;font-weight:950;box-shadow:0 3px 10px #0002}.refSection{display:flex;justify-content:space-between;align-items:center;margin:17px 2px 8px}.refSection h2{font-size:15px;margin:0;letter-spacing:-.02em}.refSection span{font-size:9px;color:#80867f;font-weight:850}.refRecommendation{background:#fff;border-radius:8px;overflow:hidden;box-shadow:0 2px 10px rgba(20,30,24,.07);border:1px solid #e7eae5}.refRecPhoto{height:120px;background:center/cover no-repeat}.refRecBody{padding:11px}.refRecBody h3{font-size:14px;margin:0 0 4px;letter-spacing:-.02em}.refRecBody p{font-size:10px;color:#737a73;margin:0 0 9px}.refRecGo{border:0;background:#173f2f;color:#fff;border-radius:7px;padding:8px 11px;font-size:9px;font-weight:950}.refMiniStats{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:#e8ebe6;border-radius:7px;overflow:hidden;margin-top:8px}.refMiniStats div{background:#f7f8f5;padding:8px 4px;text-align:center}.refMiniStats b{display:block;font-size:13px}.refMiniStats small{font-size:7px;color:#8a9089;text-transform:uppercase}
+.refBanner:after{content:'';position:absolute;inset:0;background:linear-gradient(90deg,rgba(12,45,31,.78),rgba(12,45,31,.18) 70%,rgba(12,45,31,.06))}.refBannerInner{position:relative;z-index:1;color:#fff;padding:20px 17px;max-width:280px}.refBannerEyebrow{font-size:9px;font-weight:950;letter-spacing:.13em;text-transform:uppercase;opacity:.82}.refBanner h2{font-size:25px;line-height:.98;letter-spacing:-.055em;margin:8px 0 7px}.refBanner p{font-size:10px;line-height:1.35;color:rgba(255,255,255,.82);margin:0 0 12px}.refPill{display:inline-flex;align-items:center;gap:5px;background:#fff;color:#183a2c;border-radius:999px;padding:8px 11px;font-size:9px;font-weight:950;box-shadow:0 3px 10px #0002}.refSection{display:flex;justify-content:space-between;align-items:center;margin:17px 2px 8px}.refSection h2{font-size:15px;margin:0;letter-spacing:-.02em}.refSectionRight{display:flex;align-items:center;gap:7px}.refSection span{font-size:9px;color:#80867f;font-weight:850}.refRecTimer{font-size:8px!important;color:#6f786f!important;font-weight:900!important;background:#eef2ed;border-radius:999px;padding:4px 6px;white-space:nowrap}.refRecommendation{background:#fff;border-radius:8px;overflow:hidden;box-shadow:0 2px 10px rgba(20,30,24,.07);border:1px solid #e7eae5}.refRecPhoto{height:120px;background:center/cover no-repeat}.refRecBody{padding:11px}.refRecBody h3{font-size:14px;margin:0 0 4px;letter-spacing:-.02em}.refRecBody p{font-size:10px;color:#737a73;margin:0 0 9px}.refRecGo{border:0;background:#173f2f;color:#fff;border-radius:7px;padding:8px 11px;font-size:9px;font-weight:950}.refMiniStats{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:#e8ebe6;border-radius:7px;overflow:hidden;margin-top:8px}.refMiniStats div{background:#f7f8f5;padding:8px 4px;text-align:center}.refMiniStats b{display:block;font-size:13px}.refMiniStats small{font-size:7px;color:#8a9089;text-transform:uppercase}
 @media(min-width:700px){.referenceHome{padding-top:22px!important}.refAction{min-height:160px}.refBanner{min-height:190px}.refRecPhoto{height:170px}}
 @media(max-width:360px){.refAction{min-height:132px}.refBanner h2{font-size:22px}.refIcon{width:48px;height:48px;font-size:22px}}
 
@@ -756,6 +756,7 @@ function positionHeading(pos,previous){
 function updateExploreUserPosition(pos){
   if(!pos?.coords)return;
   window.hikeCurrentPosition=pos;
+  if(currentView==='home' && !homeRecommendation) updateHomeRecommendation(true);
   const lat=Number(pos.coords.latitude),lon=Number(pos.coords.longitude);
   if(!Number.isFinite(lat)||!Number.isFinite(lon)||!exploreMap||!window.L)return;
   const p=[lat,lon];
@@ -962,6 +963,107 @@ function showTutorial(){
   $('tutorialSkip').onclick=finish;
 }
 let currentView='';
+let homeRecommendation=null;
+let homeRecommendationDeadline=0;
+let homeRecommendationTimer=null;
+const HOME_RECOMMENDATION_INTERVAL=5*60*1000;
+const HOME_RECOMMENDATION_STATE_KEY='hikeplus_home_recommendation_v2';
+function saveHomeRecommendationState(){
+  try{
+    localStorage.setItem(HOME_RECOMMENDATION_STATE_KEY,JSON.stringify({
+      deadline:Number(homeRecommendationDeadline)||0,
+      name:homeRecommendation?.name||'',
+      savedAt:Date.now()
+    }));
+  }catch(e){}
+}
+function loadHomeRecommendationState(){
+  try{
+    const raw=localStorage.getItem(HOME_RECOMMENDATION_STATE_KEY);
+    if(!raw)return false;
+    const st=JSON.parse(raw)||{};
+    const deadline=Number(st.deadline)||0;
+    if(deadline<=Date.now())return false;
+    homeRecommendationDeadline=deadline;
+    if(st.name){
+      const found=MANCHE_HIKES.find(h=>h&&h.name===st.name);
+      if(found)homeRecommendation=found;
+    }
+    return true;
+  }catch(e){return false}
+}
+function recommendationCandidates(){
+  const pos=window.hikeCurrentPosition?.coords;
+  if(!pos)return [];
+  const current={lat:Number(pos.latitude),lon:Number(pos.longitude)};
+  if(!Number.isFinite(current.lat)||!Number.isFinite(current.lon))return [];
+  return MANCHE_HIKES.filter(h=>{
+    if(!h||!h.nav||isDone(h.name))return false;
+    const lat=Number(h.lat),lon=Number(h.lon);
+    if(!Number.isFinite(lat)||!Number.isFinite(lon))return false;
+    return hav(current,{lat,lon})<=100000;
+  });
+}
+function chooseHomeRecommendation(){
+  const candidates=recommendationCandidates();
+  if(!candidates.length){homeRecommendation=null;return null;}
+  let pool=candidates.filter(h=>!homeRecommendation||h.name!==homeRecommendation.name);
+  if(!pool.length)pool=candidates;
+  homeRecommendation=pool[Math.floor(Math.random()*pool.length)];
+  return homeRecommendation;
+}
+function formatRecommendationCountdown(){
+  const left=Math.max(0,homeRecommendationDeadline-Date.now());
+  const total=Math.ceil(left/1000),m=Math.floor(total/60),sec=total%60;
+  return `Nouvelle dans ${String(m).padStart(2,'0')}:${String(sec).padStart(2,'0')}`;
+}
+function updateRecommendationTimer(){
+  if(homeRecommendationDeadline<=0){
+    homeRecommendationDeadline=Date.now()+HOME_RECOMMENDATION_INTERVAL;
+    saveHomeRecommendationState();
+  }
+  if(Date.now()>=homeRecommendationDeadline){
+    homeRecommendationDeadline=Date.now()+HOME_RECOMMENDATION_INTERVAL;
+    chooseHomeRecommendation();
+    saveHomeRecommendationState();
+    updateHomeRecommendation();
+  }
+  const el=$('homeRecTimer');
+  if(el)el.textContent=formatRecommendationCountdown();
+}
+function bindHomeRecommendation(){
+  const more=$('moreRecommendations');
+  if(more)more.onclick=()=>{closeSideMenu();render('hikes')};
+  const go=$('refRecGo');
+  if(go)go.onclick=()=>{
+    const pending=homeRecommendation;
+    if(pending){routeData.name=pending.name;routeData.distance=pending.distance;routeData.dplus=pending.dplus;routeData.difficulty=pending.difficulty||'Facile';routeData.city=pending.city||'';routeData.region=pending.region||'';routeData.lat=pending.lat;routeData.lon=pending.lon;routeData.gpx=pending.gpx;startNav();}
+  };
+}
+function updateHomeRecommendation(force=false){
+  const card=$('homeRecommendationCard');
+  if(!card)return;
+  if(force&&!loadHomeRecommendationState())chooseHomeRecommendation();
+  else if(!homeRecommendation)chooseHomeRecommendation();
+  if(homeRecommendationDeadline<=0)homeRecommendationDeadline=Date.now()+HOME_RECOMMENDATION_INTERVAL;
+  saveHomeRecommendationState();
+  const rec=homeRecommendation;
+  if(!rec){
+    card.innerHTML='<div class="refRecBody"><h3>Recherche autour de vous…</h3><p>Autorisez la localisation pour afficher une randonnée située à moins de 100 km.</p></div>';
+    return;
+  }
+  card.innerHTML=`<div class="refRecPhoto" style="background-image:url('${hikePhoto(rec)}')"></div><div class="refRecBody"><h3>${rec.name}</h3><p>${rec.city||'France'} · ${rec.difficulty||'Randonnée'} · ${Number(rec.distance||0).toFixed(1)} km · +${rec.dplus||0} m</p><div class="refMiniStats"><div><b>${Number(rec.distance||0).toFixed(1)}</b><small>km</small></div><div><b>+${rec.dplus||0}</b><small>d+</small></div><div><b>${rec.duration||'—'}</b><small>durée</small></div></div><div style="margin-top:9px"><button class="refRecGo" id="refRecGo">Commencer la randonnée →</button></div><button class="moreRecommendations" id="moreRecommendations">Voir plus de randonnées →</button></div>`;
+  bindHomeRecommendation();
+  const timer=$('homeRecTimer');if(timer)timer.textContent=formatRecommendationCountdown();
+}
+function startHomeRecommendationTimer(){
+  loadHomeRecommendationState();
+  if(!homeRecommendationDeadline)homeRecommendationDeadline=Date.now()+HOME_RECOMMENDATION_INTERVAL;
+  clearInterval(homeRecommendationTimer);
+  homeRecommendationTimer=setInterval(updateRecommendationTimer,1000);
+  updateRecommendationTimer();
+}
+
 const I18N={
   fr:{menuHome:'Accueil',menuHikes:'Randonnées',menuProgress:'Ma progression',menuSettings:'Paramètres',logout:'Se déconnecter',
     homeSub:'Prêt pour une nouvelle sortie ?',homeTag:'HIKE+ · PRÉ-BÊTA',betaStatus:'· HIKE+ est actuellement en phase de test',betaNew:'De nouvelles randonnées bientôt disponibles',levelLabelMenu:'Niveau',hikingGoal:'Objectif hiking',homeTitle:'Explore. Marche. Progresse.',homeDesc:'Découvre des randonnées, suis ton parcours et construis ton expérience au fil des sorties.',
@@ -1061,7 +1163,7 @@ function getHikeMeta(name){return (typeof MANCHE_HIKES!=='undefined'&&Array.isAr
     </article>`).join(''):`<div class="myHikesEmpty">Tu n’as encore terminé aucune randonnée.<br>Ta première sortie apparaîtra ici 🥾</div>`}
   </div>`;
 }
-function render(v,force=false){if(currentView===v&&!force){closeSideMenu();return}currentView=v;document.querySelectorAll('.tab').forEach(b=>b.classList.toggle('active',b.dataset.view===v));let x='';if(v==='home')x=`<div class="content referenceHome"><div class="homeProfileRow"><div class="homeProfileAvatar">${user.avatar?`<img src="${user.avatar}" alt="Photo de profil">`:initials(user.name)}</div><div><div class="refWelcome">Bonjour <strong>${user.name}${user.certified?'<span class="certBadge" title="Profil certifié">✓</span>':''}</strong> 👋</div><div class="homeProfileSub">Prêt pour une nouvelle sortie ?</div></div></div><div class="seasonNotice" id="seasonNotice">⚠️ Le compte sera supprimé lors du lancement de la Saison 1.</div><div class="refOutdoor" style="background-image:url('https://images.unsplash.com/photo-1551632811-561732d1e306?auto=format&fit=crop&w=1400&q=88')"><div class="refMontInner"><div class="refMontTag">HIKE+ · PRÉ-BÊTA</div><h2>Explore. Marche. Progresse.</h2><p>Découvre des randonnées, suis ton parcours et construis ton expérience au fil des sorties.</p></div></div><div class="refActionGrid"><button class="refAction orange" id="refSearch"><span class="refIcon">⌕</span><span><span class="refActionTitle">Rechercher une randonnée</span><span class="refActionSub">Trouve un circuit autour de toi</span></span></button><button class="refAction green" id="refMap"><span class="refIcon">⌖</span><span><span class="refActionTitle">Voir ma carte</span><span class="refActionSub">Les randonnées disponibles dans la Manche</span></span></button></div><div class="refActionGrid" style="margin-top:8px"><button class="refAction yellow" id="refProgress"><span class="refIcon">◎</span><span><span class="refActionTitle">Ma progression</span><span class="refActionSub">Niveau ${user.level} · ${user.xp} XP</span></span></button><button class="refAction lime" id="refHikes"><span class="refIcon">✓</span><span><span class="refActionTitle">Mes randonnées</span><span class="refActionSub">${user.hikes.length} sortie${user.hikes.length>1?'s':''} enregistrée${user.hikes.length>1?'s':''}</span></span></button></div><div class="refSection"><h2>Nos recommandations</h2><span>Pour toi</span></div><div class="refRecommendation">${(()=>{const rec=MANCHE_HIKES.filter(h=>h.nav&&!isDone(h.name))[0]||MANCHE_HIKES.find(h=>h.nav)||routeData;return `<div class="refRecPhoto" style="background-image:url('${hikePhoto(rec)}')"></div><div class="refRecBody"><h3>${rec.name}</h3><p>${rec.city||'Manche'} · ${rec.difficulty||'Randonnée'} · ${Number(rec.distance||9.8).toFixed(1)} km · +${rec.dplus||178} m</p><div class="refMiniStats"><div><b>${Number(rec.distance||9.8).toFixed(1)}</b><small>km</small></div><div><b>+${rec.dplus||178}</b><small>d+</small></div><div><b>${rec.duration||'—'}</b><small>durée</small></div></div><div style="margin-top:9px"><button class="refRecGo" id="refRecGo">Commencer la randonnée →</button></div><button class="moreRecommendations" id="moreRecommendations">Voir plus de randonnées →</button></div>`})()}</div></div>`;
+function render(v,force=false){if(currentView===v&&!force){closeSideMenu();return}currentView=v;document.querySelectorAll('.tab').forEach(b=>b.classList.toggle('active',b.dataset.view===v));let x='';if(v==='home')x=`<div class="content referenceHome"><div class="homeProfileRow"><div class="homeProfileAvatar">${user.avatar?`<img src="${user.avatar}" alt="Photo de profil">`:initials(user.name)}</div><div><div class="refWelcome">Bonjour <strong>${user.name}${user.certified?'<span class="certBadge" title="Profil certifié">✓</span>':''}</strong> 👋</div><div class="homeProfileSub">Prêt pour une nouvelle sortie ?</div></div></div><div class="seasonNotice" id="seasonNotice">⚠️ Le compte sera supprimé lors du lancement de la Saison 1.</div><div class="refOutdoor" style="background-image:url('https://images.unsplash.com/photo-1551632811-561732d1e306?auto=format&fit=crop&w=1400&q=88')"><div class="refMontInner"><div class="refMontTag">HIKE+ · PRÉ-BÊTA</div><h2>Explore. Marche. Progresse.</h2><p>Découvre des randonnées, suis ton parcours et construis ton expérience au fil des sorties.</p></div></div><div class="refActionGrid"><button class="refAction orange" id="refSearch"><span class="refIcon">⌕</span><span><span class="refActionTitle">Rechercher une randonnée</span><span class="refActionSub">Trouve un circuit autour de toi</span></span></button><button class="refAction green" id="refMap"><span class="refIcon">⌖</span><span><span class="refActionTitle">Voir ma carte</span><span class="refActionSub">Les randonnées disponibles dans la Manche</span></span></button></div><div class="refActionGrid" style="margin-top:8px"><button class="refAction yellow" id="refProgress"><span class="refIcon">◎</span><span><span class="refActionTitle">Ma progression</span><span class="refActionSub">Niveau ${user.level} · ${user.xp} XP</span></span></button><button class="refAction lime" id="refHikes"><span class="refIcon">✓</span><span><span class="refActionTitle">Mes randonnées</span><span class="refActionSub">${user.hikes.length} sortie${user.hikes.length>1?'s':''} enregistrée${user.hikes.length>1?'s':''}</span></span></button></div><div class="refSection"><h2>Nos recommandations</h2><div class="refSectionRight"><span>Pour toi</span><span class="refRecTimer" id="homeRecTimer">Nouvelle dans 05:00</span></div></div><div class="refRecommendation" id="homeRecommendationCard"></div></div>`;
 else if(v==='hikes')x=`<div class="exploreScreen"><div id="exploreMap"></div><div class="exploreTop"><input class="exploreSearch" id="hikeSearch" placeholder="🔎 Ville, région ou randonnée…"><button class="exploreLocate" id="exploreLocate">⌖</button></div><div class="exploreFilters"><button class="exploreChip active" data-filter="all">Toutes</button><button class="exploreChip" data-filter="easy">Faciles</button><button class="exploreChip" data-filter="moderate">Modérées</button><button class="exploreChip" data-filter="hard">Difficiles</button><button class="exploreChip" data-filter="loop">↻ Boucles</button><button class="exploreChip" data-filter="done">✓ Déjà faites</button></div><div class="exploreInfo" id="exploreCount">Randonnées disponibles</div><div class="exploreSheet" id="exploreSheet"><div class="sheetHandle"></div><div class="sheetTop"><div><div class="eyebrow" id="sheetEyebrow"></div><div class="sheetTitle" id="sheetTitle"></div><div class="sheetMeta" id="sheetMeta"></div></div><button class="sheetClose" id="sheetClose">×</button></div><div class="sheetMetrics"><div><b id="sheetDistance">—</b><small>KM</small></div><div><b id="sheetDplus">—</b><small>D+</small></div><div><b id="sheetDuration">—</b><small>DURÉE</small></div><div><b id="sheetDifficulty">—</b><small>NIVEAU</small></div></div><div class="sheetDone" id="sheetDone"></div><div class="sheetActions"><button class="sheetAction start" id="sheetStart"><span class="actionIcon">➤</span><span class="actionTitle">Aller au départ</span><span class="actionSub">Ouvrir l’itinéraire dans votre GPS</span><span class="actionArrow">›</span></button><button class="sheetAction hike" id="sheetHikeStart"><span class="actionIcon">▷</span><span class="actionTitle">Commencer la randonnée</span><span class="actionSub">Lancer le suivi GPS de la randonnée</span><span class="actionArrow">›</span></button></div><div class="sheetGuide"><span class="sheetGuideIcon">i</span><span>Vous pouvez commencer la randonnée où que vous soyez. Le suivi GPS se lance immédiatement et vous guide sur le tracé.</span></div></div></div>`;
 else if(v==='progress')x=`<div class="content"><div class="eyebrow">Progression</div><h1>Ton parcours</h1><div class="progressProfile"><div class="progressProfileAvatar">${user.avatar?`<img src="${user.avatar}" alt="">`:initials(user.name)}</div><div><div class="progressProfileName">${user.name}${user.certified?'<span class="certBadge" title="Profil certifié">✓</span>':''}</div><div class="progressProfileTag">Ton profil · aventure outdoor</div></div></div><div class="xpHero"><div class="xpLabel">Expérience</div><div class="xpBig">${user.xp} XP</div><div class="xpMeta">Niveau ${user.level} · progression vers le prochain niveau</div><div class="xpBar"><i style="width:${levelProgress(user.xp).pct}%"></i></div></div><div class="stats"><div class="stat"><b>${totalKm().toFixed(1)} km</b><small>parcourus</small></div><div class="stat"><b>${Math.round(totalDplus())} m</b><small>D+ cumulé</small></div><div class="stat"><b>${user.hikes.length}</b><small>sorties</small></div><div class="stat"><b>${user.xp}</b><small>XP</small></div></div><button class="refAction lime progressMyHikesBtn" id="progressMyHikes" style="width:100%"><span class="refIcon">✓</span><span><span class="refActionTitle">Mes randonnées</span><span class="refActionSub">Voir le récapitulatif de tes sorties</span></span></button><div class="section">Mes grades 🏆</div><div class="card"><div style="display:flex;justify-content:space-between;align-items:center"><b>Collection de grades</b><span class="gradeCount">30 badges · bientôt disponibles</span></div><div class="badgeBetaLock">🔒 <span><b>Badges verrouillés pendant la pré-bêta</b><br>La collection complète sera bientôt disponible.</span></div><div class="gradeGrid">${GRADES.map((g,i)=>{const tier=Math.min(5,Math.floor(i/5)+1);return `<div class="gradeCard tier${tier} betaLocked locked"><div class="gradeBadge"><div class="gradeBadgeIcon">${gradeIcon(i)}</div><span class="gradeBadgeLevel">${g[1]}</span></div><div class="gradeName">${g[0]}</div><div class="gradeMeta">🔒 Bientôt disponible</div><div class="gradeIndex">Grade ${String(i+1).padStart(2,'0')} · HIKE+</div></div>`}).join('')}</div></div></div>`;
 else if(v==='myhikes')x=renderMyHikes();
@@ -1076,11 +1178,9 @@ function bindView(v){
     $('refMap').onclick=()=>go('hikes');
     $('refProgress').onclick=()=>go('progress');
     $('refHikes').onclick=()=>go('myhikes');
-    $('moreRecommendations').onclick=()=>go('hikes');
-    $('refRecGo').onclick=()=>{
-      const pending=MANCHE_HIKES.filter(h=>h.nav&&!isDone(h.name))[0]||MANCHE_HIKES.find(h=>h.nav);
-      if(pending){routeData.name=pending.name;routeData.distance=pending.distance;routeData.dplus=pending.dplus;routeData.difficulty=pending.difficulty||'Facile';routeData.city=pending.city||'';routeData.region=pending.region||'';routeData.lat=pending.lat;routeData.lon=pending.lon;routeData.gpx=pending.gpx;startNav()}
-    };
+    startHomeRecommendationTimer();
+    updateHomeRecommendation(true);
+    bindHomeRecommendation();
     $('homeMenu').onclick=()=>openSideMenu();
     showHomeArrival();
     if(!feedbackAlreadyAnswered())feedbackOpenTimer=setTimeout(openFeedbackQuestionnaire,3750);
