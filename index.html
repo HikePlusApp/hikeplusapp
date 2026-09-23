@@ -1139,10 +1139,10 @@ function formatHikeDuration(sec){
   return h?`${h} h ${String(m).padStart(2,'0')} min`:`${m} min`;
 }
 function getHikeMeta(name){return (typeof MANCHE_HIKES!=='undefined'&&Array.isArray(MANCHE_HIKES))?MANCHE_HIKES.find(x=>x.name===name):null;} function parseEstimatedDuration(v){if(!v)return 0;const m=String(v).match(/(?:(\d+)\s*h)?\s*(?:(\d+)\s*min)?/i);if(!m)return 0;return ((Number(m[1])||0)*60+(Number(m[2])||0))*60;} function normalizeHikeRecord(h){const meta=getHikeMeta(h.name);const difficulty=meta?.difficulty||h.difficulty||'Facile';const mult=(difficultyMultiplier(difficulty)*(h.certified?3:1));let xp=Math.max(0,Number(h.xp)||0);if(xp<=0&&Number(h.distance)>0)xp=Math.max(50,Math.round(Number(h.distance)*20))*difficultyMultiplier(difficulty);let durationSec=Math.max(0,Number(h.durationSec)||0);if(durationSec<=0&&meta?.duration)durationSec=parseEstimatedDuration(meta.duration);return {...h,difficulty,multiplier:Number(h.multiplier)||mult,xp,durationSec};} function renderMyHikes(){
-  const hikes=(user.hikes||[]).map(normalizeHikeRecord).sort((a,b)=>(b.date||0)-(a.date||0));
-  const km=hikes.reduce((s,h)=>s+Number(h.distance||0),0);
-  const dplus=hikes.reduce((s,h)=>s+Number(h.dplus||0),0);
-  const xp=hikes.reduce((s,h)=>s+Number(h.xp||0),0);
+  const hikes=(user.hikes||[]).map((raw,index)=>({raw,index,h:normalizeHikeRecord(raw)})).sort((a,b)=>(b.h.date||0)-(a.h.date||0));
+  const km=hikes.reduce((sum,item)=>sum+Number(item.h.distance||0),0);
+  const dplus=hikes.reduce((sum,item)=>sum+Number(item.h.dplus||0),0);
+  const xp=hikes.reduce((sum,item)=>sum+Number(item.h.xp||0),0);
   return `<div class="content myHikesWrap">
     <button class="myHikesBack" id="myHikesBack">← Ma progression</button>
     <div class="myHikesHeader"><div><div class="eyebrow">Historique</div><h1>Mes randonnées</h1></div><div style="font-size:12px;color:#858a84">${hikes.length} sortie${hikes.length>1?'s':''}</div></div>
@@ -1152,7 +1152,8 @@ function getHikeMeta(name){return (typeof MANCHE_HIKES!=='undefined'&&Array.isAr
       <div class="mhStat"><b>${hikes.length}</b><small>randonnées</small></div>
       <div class="mhStat"><b>${xp} XP</b><small>XP gagnée</small></div>
     </div>
-    ${hikes.length?hikes.map(h=>`<article class="myHikeCard">
+    ${hikes.length?hikes.map(item=>{const h=item.h;return `<article class="myHikeCard">
+      <button class="myHikeDelete" type="button" data-hike-index="${item.index}" aria-label="Supprimer la randonnée" title="Supprimer la randonnée">×</button>
       <div class="myHikeTop"><div><h3>${h.name||'Randonnée'}</h3><div class="myHikeDate">${formatHikeDate(h.date)}</div></div><div><span class="difficultyPill ${h.difficulty==='Difficile'?'difficult':(h.difficulty==='Modérée'?'moderate':'easy')}">${h.difficulty||'Facile'}</span><div class="myHikeXp">+${Number(h.xp||0)} XP</div></div></div>
       <div class="myHikeMeta">
         <div><b>${Number(h.distance||0).toFixed(2)} km</b><small>distance</small></div>
@@ -1160,8 +1161,20 @@ function getHikeMeta(name){return (typeof MANCHE_HIKES!=='undefined'&&Array.isAr
         <div><b>${formatHikeDuration(h.durationSec)}</b><small>temps</small></div>
         <div><b>×${h.multiplier||difficultyMultiplier(h.difficulty)}</b><small>multiplicateur</small></div>
       </div>
-    </article>`).join(''):`<div class="myHikesEmpty">Tu n’as encore terminé aucune randonnée.<br>Ta première sortie apparaîtra ici 🥾</div>`}
+    </article>`}).join(''):`<div class="myHikesEmpty">Tu n’as encore terminé aucune randonnée.<br>Ta première sortie apparaîtra ici 🥾</div>`}
   </div>`;
+}
+function deleteMyHike(index){
+  const i=Number(index);
+  if(!Number.isInteger(i)||i<0||i>=(user.hikes||[]).length)return;
+  const hike=user.hikes[i];
+  const name=hike?.name||'cette randonnée';
+  if(!window.confirm(`Supprimer « ${name} » de Mes randonnées ?\n\nL’XP gagnée ne sera pas retirée.`))return;
+  user.hikes.splice(i,1);
+  db.profiles[db.current]=user;
+  persist();
+  render('myhikes',true);
+  toast('Randonnée supprimée · XP conservée');
 }
 function render(v,force=false){if(currentView===v&&!force){closeSideMenu();return}currentView=v;document.querySelectorAll('.tab').forEach(b=>b.classList.toggle('active',b.dataset.view===v));let x='';if(v==='home')x=`<div class="content referenceHome"><div class="homeProfileRow"><div class="homeProfileAvatar">${user.avatar?`<img src="${user.avatar}" alt="Photo de profil">`:initials(user.name)}</div><div><div class="refWelcome">Bonjour <strong>${user.name}${user.certified?'<span class="certBadge" title="Profil certifié">✓</span>':''}</strong> 👋</div><div class="homeProfileSub">Prêt pour une nouvelle sortie ?</div></div></div><div class="seasonNotice" id="seasonNotice">⚠️ Le compte sera supprimé lors du lancement de la Saison 1.</div><div class="refOutdoor" style="background-image:url('https://images.unsplash.com/photo-1551632811-561732d1e306?auto=format&fit=crop&w=1400&q=88')"><div class="refMontInner"><div class="refMontTag">HIKE+ · PRÉ-BÊTA</div><h2>Explore. Marche. Progresse.</h2><p>Découvre des randonnées, suis ton parcours et construis ton expérience au fil des sorties.</p></div></div><div class="refActionGrid"><button class="refAction orange" id="refSearch"><span class="refIcon">⌕</span><span><span class="refActionTitle">Rechercher une randonnée</span><span class="refActionSub">Trouve un circuit autour de toi</span></span></button><button class="refAction green" id="refMap"><span class="refIcon">⌖</span><span><span class="refActionTitle">Voir ma carte</span><span class="refActionSub">Les randonnées disponibles dans la Manche</span></span></button></div><div class="refActionGrid" style="margin-top:8px"><button class="refAction yellow" id="refProgress"><span class="refIcon">◎</span><span><span class="refActionTitle">Ma progression</span><span class="refActionSub">Niveau ${user.level} · ${user.xp} XP</span></span></button><button class="refAction lime" id="refHikes"><span class="refIcon">✓</span><span><span class="refActionTitle">Mes randonnées</span><span class="refActionSub">${user.hikes.length} sortie${user.hikes.length>1?'s':''} enregistrée${user.hikes.length>1?'s':''}</span></span></button></div><div class="refSection"><h2>Nos recommandations</h2><div class="refSectionRight"><span>Pour toi</span><span class="refRecTimer" id="homeRecTimer">Nouvelle dans 05:00</span></div></div><div class="refRecommendation" id="homeRecommendationCard"></div></div>`;
 else if(v==='hikes')x=`<div class="exploreScreen"><div id="exploreMap"></div><div class="exploreTop"><input class="exploreSearch" id="hikeSearch" placeholder="🔎 Ville, région ou randonnée…"><button class="exploreLocate" id="exploreLocate">⌖</button></div><div class="exploreFilters"><button class="exploreChip active" data-filter="all">Toutes</button><button class="exploreChip" data-filter="easy">Faciles</button><button class="exploreChip" data-filter="moderate">Modérées</button><button class="exploreChip" data-filter="hard">Difficiles</button><button class="exploreChip" data-filter="loop">↻ Boucles</button><button class="exploreChip" data-filter="done">✓ Déjà faites</button></div><div class="exploreInfo" id="exploreCount">Randonnées disponibles</div><div class="exploreSheet" id="exploreSheet"><div class="sheetHandle"></div><div class="sheetTop"><div><div class="eyebrow" id="sheetEyebrow"></div><div class="sheetTitle" id="sheetTitle"></div><div class="sheetMeta" id="sheetMeta"></div></div><button class="sheetClose" id="sheetClose">×</button></div><div class="sheetMetrics"><div><b id="sheetDistance">—</b><small>KM</small></div><div><b id="sheetDplus">—</b><small>D+</small></div><div><b id="sheetDuration">—</b><small>DURÉE</small></div><div><b id="sheetDifficulty">—</b><small>NIVEAU</small></div></div><div class="sheetDone" id="sheetDone"></div><div class="sheetActions"><button class="sheetAction start" id="sheetStart"><span class="actionIcon">➤</span><span class="actionTitle">Aller au départ</span><span class="actionSub">Ouvrir l’itinéraire dans votre GPS</span><span class="actionArrow">›</span></button><button class="sheetAction hike" id="sheetHikeStart"><span class="actionIcon">▷</span><span class="actionTitle">Commencer la randonnée</span><span class="actionSub">Lancer le suivi GPS de la randonnée</span><span class="actionArrow">›</span></button></div><div class="sheetGuide"><span class="sheetGuideIcon">i</span><span>Vous pouvez commencer la randonnée où que vous soyez. Le suivi GPS se lance immédiatement et vous guide sur le tracé.</span></div></div></div>`;
@@ -1214,6 +1227,7 @@ function bindView(v){
   }
   if(v==='myhikes'){
     const b=$('myHikesBack'); if(b)b.onclick=()=>render('progress');
+    document.querySelectorAll('.myHikeDelete').forEach(btn=>btn.addEventListener('click',()=>deleteMyHike(btn.dataset.hikeIndex)));
   }
   if(v==='settings'){
     $('refRefresh').onclick=async()=>{try{if('serviceWorker' in navigator){const regs=await navigator.serviceWorker.getRegistrations();for(const reg of regs){try{await reg.update()}catch(e){}}}if('caches' in window){const keys=await caches.keys();await Promise.all(keys.map(k=>caches.delete(k)));}toast('HIKE+ se met à jour…');setTimeout(()=>window.location.reload(),350);}catch(e){window.location.reload()}};
@@ -1265,7 +1279,7 @@ function checkpointCount(){
   if(km<40)return 9;
   return 10;
 }
-function getCheckpointTargets(){const n=checkpointCount();return Array.from({length:n},(_,i)=>(i+1)/(n+1))}
+function getCheckpointTargets(){const n=checkpointCount();return Array.from({length:n+1},(_,i)=>i<n?(i+1)/(n+1):1)}
 let checkpointTargets=[];let checkpointPoints=[];function checkpointAt(i){const p=atProg(total*checkpointTargets[i]);return p}
 function cpbar(){const n=checkpointTargets.length||checkpointCount();$('cpbar').innerHTML=Array.from({length:n},(_,i)=>{const num=i+1;return `${i?'<div class=\"line\"></div>':''}<div class=\"cp ${cp>=num?'done':cp===num-1?'active':''}\">${num}</div>`}).join('')}
 function checkpointIcon(n,done=false){return L.divIcon({className:'checkpoint-icon',html:`<div class=\"checkpoint-dot ${done?'done':''}\"><span>${n}</span></div>`,iconSize:[34,34],iconAnchor:[17,17]})}
@@ -1336,7 +1350,7 @@ function updateGuidance(n,pos){
 }
 function updateStats(n,acc,pos){best=Math.max(best,n.progress);updateRouteGuidance(best);$('distance').textContent=(traveled/1000).toFixed(2);$('dplus').textContent=Math.round(dplus);$('gpsAcc').textContent=Number.isFinite(acc)?Math.round(acc)+' m':'—';$('remaining').textContent=(Math.max(0,total-best)/1000).toFixed(2)+' km restants';const far=n.dist>70;if(far){if(!offRouteSince)offRouteSince=Date.now();if(Date.now()-offRouteSince>=5000){$('offroute').classList.add('show')}}else{offRouteSince=0;$('offroute').classList.remove('show')}
   // Checkpoints are anchored to the real GPX and are only validated when the GPS position actually reaches the checkpoint.
-  while(cp<checkpointTargets.length){const target=total*checkpointTargets[cp];const reachedProgress=best>=target;const reachedPoint=pos&&checkpointPoints[cp]&&hav(pos,checkpointPoints[cp])<=45;if(reachedProgress&&reachedPoint){cp++;checkpointReached(cp)}else break}
+  while(cp<checkpointTargets.length){const target=total*checkpointTargets[cp];const reachedProgress=best>=target;const reachedPoint=pos&&checkpointPoints[cp]&&hav(pos,checkpointPoints[cp])<=45;if(reachedProgress&&reachedPoint){cp++;checkpointReached(cp);if(cp===checkpointTargets.length){finish();return}}else break}
   cpbar();refreshCheckpointMarkers();for(let i=1;i<=checkpointTargets.length;i++){const el=checkpointMarkers[i-1]?.getElement()?.querySelector('.checkpoint-dot');if(el)el.classList.toggle('active',cp===i-1)}}
 function toast(msg){const el=$('toast');el.textContent=msg;el.classList.remove('show');void el.offsetWidth;el.classList.add('show');clearTimeout(window._toastT);window._toastT=setTimeout(()=>el.classList.remove('show'),2200)}
 function xpBurst(text){const el=document.createElement('div');el.className='xpBurst';el.textContent=text;document.body.appendChild(el);setTimeout(()=>el.remove(),950)}
@@ -1412,7 +1426,7 @@ function onGPS(pos){
   if(n.dist<100)map.panTo([p.lat,p.lon],{animate:false});
   updateGuidance(n);
   saveNavSession();
-  const endPoint=pts[pts.length-1];if(endPoint&&n.progress>=total*.98&&n.dist<=35)finish();
+
 }
 function gpsError(e){$('instruction').textContent=e.code===1?'Autorisez la localisation dans Safari':e.code===2?'Position indisponible — essayez dehors':'GPS en attente — nouvelle tentative…';toast($('instruction').textContent)}
 async function runStartCountdown(duration){const overlay=$('startCountdownOverlay'),num=$('startCountdownNumber'),title=$('startCountdownTitle');if(!overlay||!num||!title)return;overlay.classList.add('show');overlay.setAttribute('aria-hidden','false');const end=Date.now()+duration*1000;let last=-1;return new Promise(resolve=>{const tick=()=>{const left=Math.max(0,end-Date.now());const sec=Math.ceil(left/1000);if(sec!==last){last=sec;num.className='startCountdownNumber';num.textContent=String(sec);title.textContent=t('depart');void num.offsetWidth;num.style.animation='none';void num.offsetWidth;num.style.animation='countdownNumberPop .9s cubic-bezier(.2,.8,.2,1)'}if(left<=0){num.className='startCountdownNumber go';num.textContent='GO !';title.textContent=t('go');num.style.animation='countdownNumberPop .55s cubic-bezier(.2,.8,.2,1)';setTimeout(()=>{overlay.classList.remove('show');overlay.setAttribute('aria-hidden','true');resolve()},700);return}requestAnimationFrame(tick)};tick()})}
@@ -1472,5 +1486,13 @@ function adminOpen(){adminFranceModal();document.getElementById('adminFrancePack
 window.addEventListener('load',async()=>{try{adminFranceModal();const PACK_VERSION='V6_BOUCLES_PLUS_175_AUTOINSTALL';await adminInstall();localStorage.setItem('hikeplus_admin_france_pack_version',PACK_VERSION)}catch(e){console.error('HIKE+ pack France auto-install',e)}});
 })();
 </script>
+
+<style id="hikeplus-v15-hike-delete">
+.myHikeCard{position:relative!important}
+.myHikeDelete{position:absolute!important;top:12px!important;right:12px!important;width:30px!important;height:30px!important;border:0!important;border-radius:50%!important;background:#f4f5f3!important;color:#7a817c!important;font-size:22px!important;line-height:28px!important;font-weight:500!important;cursor:pointer!important;z-index:5!important;display:grid!important;place-items:center!important;transition:transform .15s ease,background .15s ease,color .15s ease!important}
+.myHikeDelete:hover{background:#fce9e9!important;color:#c53b3b!important;transform:scale(1.06)!important}
+.myHikeDelete:active{transform:scale(.94)!important}
+.myHikeTop{padding-right:42px!important}
+</style>
 </body></html>
 <style>.seasonNotice{margin-bottom:8px!important}</style>

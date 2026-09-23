@@ -1,4 +1,4 @@
-const CACHE='hikeplus-v01-4-admin-recommandations';
+const CACHE='hikeplus-v01-5-admin-recommandations';
 const CORE=['./','./index.html','./manifest.json','./hike-logo.png'];
 
 self.addEventListener('install',event=>{
