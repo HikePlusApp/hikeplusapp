@@ -1037,7 +1037,19 @@ function bindHomeRecommendation(){
   const go=$('refRecGo');
   if(go)go.onclick=()=>{
     const pending=homeRecommendation;
-    if(pending){routeData.name=pending.name;routeData.distance=pending.distance;routeData.dplus=pending.dplus;routeData.difficulty=pending.difficulty||'Facile';routeData.city=pending.city||'';routeData.region=pending.region||'';routeData.lat=pending.lat;routeData.lon=pending.lon;routeData.gpx=pending.gpx;startNav();}
+    if(!pending)return;
+    closeSideMenu();
+    render('hikes',true);
+    let tries=0;
+    const openPreview=()=>{
+      const target=MANCHE_HIKES.find(h=>h.gpx===pending.gpx||h.name===pending.name);
+      if(target&&exploreMap){
+        openHikeSheet(target);
+        return;
+      }
+      if(tries++<30)setTimeout(openPreview,100);
+    };
+    setTimeout(openPreview,80);
   };
 }
 function updateHomeRecommendation(force=false){
@@ -1052,7 +1064,7 @@ function updateHomeRecommendation(force=false){
     card.innerHTML='<div class="refRecBody"><h3>Recherche autour de vous…</h3><p>Autorisez la localisation pour afficher une randonnée située à moins de 100 km.</p></div>';
     return;
   }
-  card.innerHTML=`<div class="refRecPhoto" style="background-image:url('${hikePhoto(rec)}')"></div><div class="refRecBody"><h3>${rec.name}</h3><p>${rec.city||'France'} · ${rec.difficulty||'Randonnée'} · ${Number(rec.distance||0).toFixed(1)} km · +${rec.dplus||0} m</p><div class="refMiniStats"><div><b>${Number(rec.distance||0).toFixed(1)}</b><small>km</small></div><div><b>+${rec.dplus||0}</b><small>d+</small></div><div><b>${rec.duration||'—'}</b><small>durée</small></div></div><div style="margin-top:9px"><button class="refRecGo" id="refRecGo">Commencer la randonnée →</button></div><button class="moreRecommendations" id="moreRecommendations">Voir plus de randonnées →</button></div>`;
+  card.innerHTML=`<div class="refRecPhoto" style="background-image:url('${hikePhoto(rec)}')"></div><div class="refRecBody"><h3>${rec.name}</h3><p>${rec.city||'France'} · ${rec.difficulty||'Randonnée'} · ${Number(rec.distance||0).toFixed(1)} km · +${rec.dplus||0} m</p><div class="refMiniStats"><div><b>${Number(rec.distance||0).toFixed(1)}</b><small>km</small></div><div><b>+${rec.dplus||0}</b><small>d+</small></div><div><b>${rec.duration||'—'}</b><small>durée</small></div></div><div style="margin-top:9px"><button class="refRecGo" id="refRecGo">Voir la randonnée →</button></div><button class="moreRecommendations" id="moreRecommendations">Voir plus de randonnées →</button></div>`;
   bindHomeRecommendation();
   const timer=$('homeRecTimer');if(timer)timer.textContent=formatRecommendationCountdown();
 }
