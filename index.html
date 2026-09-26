@@ -1292,7 +1292,7 @@ function checkpointCount(){
   if(km<40)return 9;
   return 10;
 }
-function getCheckpointTargets(){const n=checkpointCount();return Array.from({length:n+1},(_,i)=>i<n?(i+1)/(n+1):1)}
+function getCheckpointTargets(){const n=checkpointCount();return Array.from({length:n},(_,i)=>(i+1)/(n+1))}
 let checkpointTargets=[];let checkpointPoints=[];function checkpointAt(i){const p=atProg(total*checkpointTargets[i]);return p}
 function cpbar(){const n=checkpointTargets.length||checkpointCount();$('cpbar').innerHTML=Array.from({length:n},(_,i)=>{const num=i+1;return `${i?'<div class=\"line\"></div>':''}<div class=\"cp ${cp>=num?'done':cp===num-1?'active':''}\">${num}</div>`}).join('')}
 function checkpointIcon(n,done=false){return L.divIcon({className:'checkpoint-icon',html:`<div class=\"checkpoint-dot ${done?'done':''}\"><span>${n}</span></div>`,iconSize:[34,34],iconAnchor:[17,17]})}
@@ -1363,7 +1363,7 @@ function updateGuidance(n,pos){
 }
 function updateStats(n,acc,pos){best=Math.max(best,n.progress);updateRouteGuidance(best);$('distance').textContent=(traveled/1000).toFixed(2);$('dplus').textContent=Math.round(dplus);$('gpsAcc').textContent=Number.isFinite(acc)?Math.round(acc)+' m':'—';$('remaining').textContent=(Math.max(0,total-best)/1000).toFixed(2)+' km restants';const far=n.dist>70;if(far){if(!offRouteSince)offRouteSince=Date.now();if(Date.now()-offRouteSince>=5000){$('offroute').classList.add('show')}}else{offRouteSince=0;$('offroute').classList.remove('show')}
   // Checkpoints are anchored to the real GPX and are only validated when the GPS position actually reaches the checkpoint.
-  while(cp<checkpointTargets.length){const target=total*checkpointTargets[cp];const reachedProgress=best>=target;const reachedPoint=pos&&checkpointPoints[cp]&&hav(pos,checkpointPoints[cp])<=45;if(reachedProgress&&reachedPoint){cp++;checkpointReached(cp);if(cp===checkpointTargets.length){finish();return}}else break}
+  while(cp<checkpointTargets.length){const target=total*checkpointTargets[cp];const reachedProgress=best>=target;const reachedPoint=pos&&checkpointPoints[cp]&&hav(pos,checkpointPoints[cp])<=45;if(reachedProgress&&reachedPoint){cp++;checkpointReached(cp)}else break}
   cpbar();refreshCheckpointMarkers();for(let i=1;i<=checkpointTargets.length;i++){const el=checkpointMarkers[i-1]?.getElement()?.querySelector('.checkpoint-dot');if(el)el.classList.toggle('active',cp===i-1)}}
 function toast(msg){const el=$('toast');el.textContent=msg;el.classList.remove('show');void el.offsetWidth;el.classList.add('show');clearTimeout(window._toastT);window._toastT=setTimeout(()=>el.classList.remove('show'),2200)}
 function xpBurst(text){const el=document.createElement('div');el.className='xpBurst';el.textContent=text;document.body.appendChild(el);setTimeout(()=>el.remove(),950)}
@@ -1437,7 +1437,7 @@ function onGPS(pos){
   marker(p,heading);
   updateStats(n,c.accuracy,p);
   if(n.dist<100)map.panTo([p.lat,p.lon],{animate:false});
-  updateGuidance(n);
+  updateGuidance(n); const endPoint=pts[pts.length-1];if(endPoint&&n.progress>=total*.98&&n.dist<=35)finish();
   saveNavSession();
 
 }
