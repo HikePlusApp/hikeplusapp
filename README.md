@@ -20,3 +20,6 @@ Pack France intégré : V5 BOUCLES (162 GPX : 126 existantes + 36 boucles).
 
 
 V5: le pack France est automatiquement redécompressé au lancement de l’application.
+
+
+Météo HIKE+ activée pour la bêta ouverte : sélection d’une randonnée, météo au point de départ et prévisions.
